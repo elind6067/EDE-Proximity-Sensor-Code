@@ -1,0 +1,85 @@
+/*
+ * This program takes input from the ultrasonic sensor and uses that to determine output
+ * in the serial monitor, LED, and buzzer on the breadboard.
+ * We found example code using the ultrasonic sensor from: 
+
+ * Author: SMRAZA KEEN
+ * Date:2016/6/29
+ * IDE V1.6.9
+ * Email:TechnicSmraza@outlook.com
+ * Function:
+
+ */
+
+/* from <https://www.instructables.com/Arduino-is-Slow-and-how-to-fix-it/>
+ * To turn a port high, use this command:
+ * PORT{letter} |= _BV(P{letter}{number});
+ * To turn a port low, use this command:
+ * PORT{letter} &= ~_BV(P{letter}{number});
+*/
+
+// set the digital pins to the coresponding physical wires
+const int TrigPin = 2;
+const int EchoPin = 3;
+const int ledPin = 7;
+/* Our TrigPin is PD2
+ * Our EchoPin is PD3
+ * Our ledPin is  PD7
+ */
+const int threshold = 120;  // threshold, in cm, for what we consider "too close"
+// threshold = 120cm ~= 3 ft in current configuration
+const int winSize = 8;
+unsigned int dataArray[winSize];
+unsigned int sum, avg;
+
+// Function to reset the ultrasonic sensor and prepare it for reading
+void reset() {
+  PORTD &= ~_BV(PD2);  //set trig pin low
+  delayMicroseconds(2);
+  PORTD |= _BV(PD2);  //set trig pin high
+  delayMicroseconds(10);
+  PORTD &= ~_BV(PD2);  //set trig pin low
+}
+
+// Function to collect 10 samples from the ultrasonic sensor and return the computed average
+unsigned int getDistance() {
+  for (int i = 0; i < winSize; i++) {
+    reset();
+    // convert the time of the pulse to centimeters
+    dataArray[i] = pulseIn(EchoPin, HIGH) / 58;
+  }
+  // compute the average of collected data
+  sum = 0;
+  avg = 0;
+  for (int i = 0; i < winSize; i++) {
+    sum += dataArray[i];
+  }
+  avg = sum / winSize;
+  return avg;
+}
+
+// set each pin to appropriate input or output
+// echo pin 'listens' for input, while led pin and trig pin use echo pin input
+void setup() {
+  pinMode(TrigPin, OUTPUT);
+  pinMode(EchoPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+}
+
+// sets up signals for ultrasonic sensor and serial monitor printing
+void loop() {
+  unsigned int dist = getDistance();
+
+  // this is the beginning of our own code:
+  // turning an LED on and off based on the distance the Ultrasonic sensor senses
+  // turn off led
+  PORTD &= ~_BV(PD7);  //set led pin low
+  // turn on led if object is in a specified distance
+  if (dist < threshold) {
+    PORTD |= _BV(PD7);  //set led pin high
+  }
+  // otherwise keep led off
+  else {
+    PORTD &= ~_BV(PD7);  //set led pin low
+  }
+}
